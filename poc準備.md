@@ -49,11 +49,11 @@
 
 ## 異常系（一部）
 - 作成、更新（PKがNull）
-<br/>　　　→　Exception:com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMappingException: TestMst[id]; null or empty value for primary key
+<br/>　→　Exception:com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMappingException: TestMst[id]; null or empty value for primary key
 - 検索（0件の場合）
-<br/>　　　→　Nullを返す
+<br/>　→　Nullを返す
 - 削除（0件の場合）
-<br/>　　　→　OK
+<br/>　→　OK
 <br/>
 
 2つのAPIを試してみた
