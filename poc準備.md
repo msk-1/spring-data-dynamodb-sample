@@ -56,14 +56,8 @@
 
 <br/>
 
-## DynamoDBを使用してみての所感
-- テーブル設計が難しそう<br>
-→各パーティションに分散するようにパーティションキーを設計する必要がある（ホットパーティションを作らない）
-
-<br/>
-
 ## トランザクションメモ
-
+<details>
 - APIについて
 <br/>　　→　DynamoDBMapperクラス（上位レベル）　と　AmazonDynamoDBクラス
 
@@ -131,3 +125,20 @@
         }
     }
 ~~~
+</details>
+<br>
+
+## DynamoDBを使用してみての所感
+- テーブル設計が重要<br>
+→各パーティションに分散するようにパーティションキーを設計する必要がある（ホットパーティションを作らない）<br>
+→テーブルフルスキャンを避けるため、セカンダリインデックスを駆使する必要がある<br>
+　https://qiita.com/shibataka000/items/e3f3792201d6fcc397fd <br>
+　https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/GSI.html
+　
+- 検索が苦手<br>
+→機能として値検索（フィルター）はあるが、性能的にあまり使用しないほうがいい<br>
+→検索用のテーブル等を作る必要がある
+- Spring → DynamoDBの操作は簡単に実装できる<br>
+→公式のライブラリでお手軽に実装できた
+
+<br/>
