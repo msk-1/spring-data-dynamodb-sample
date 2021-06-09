@@ -59,3 +59,75 @@
 ## DynamoDBを使用してみての所感
 - テーブル設計が難しそう<br>
 →各パーティションに分散するようにパーティションキーを設計する必要がある（ホットパーティションを作らない）
+
+<br/>
+
+## トランザクションメモ
+
+- APIについて
+<br/>　　→　DynamoDBMapperクラス（上位レベル）　と　AmazonDynamoDBクラス
+
+- トランザクションAPI
+<br/>　　→　DynamoDBMapper.transactionWrite()　から　AmazonDynamoDB.transactWriteItems()　を呼び出す
+
+- transactWriteItems()
+<br/>　　→　同じリージョン内の 1 つ以上の DynamoDB テーブルにある最大 25 個の異なる項目をターゲット
+<br/>　　→　トランザクション内のアイテムの合計サイズは 4 MB を超えることはできません
+<br/>　　→　すべて成功するかどれも成功しないかのどちらとなるように（BatchWriteItem では、一部のみ成功可）
+<br/>　　→　同じトランザクション内の複数のオペレーションが同じ項目をターゲットとすることはできない
+<br/>　　→　トランザクション内にできるアクション
+<br/>　　　　　・Put
+<br/>　　　　　・Update
+<br/>　　　　　・Delete
+<br/>　　　　　・ConditionCheck　→　項目が存在することを確認するか、項目の特定の属性の条件を確認
+<br/>　　→　クライアントトークン設定可：10分間（複数回送信された場合に、アプリケーションエラーを防ぐ）
+<br/>　　→　グローバルセカンダリインデックス (GSI)、ストリーム、バックアップの反映は、即時ではない（非同期）
+
+- 書き込みのエラー
+
+  - 同じ TransactWriteItems オペレーション内の複数のアクションが同じ項目をターゲットとしているために、トランザクション検証エラーが発生
+  - TransactWriteItems リクエストが、TransactWriteItems リクエスト内の 1 つ以上の項目に対する継続中の TransactWriteItems オペレーションと競合する場合、TransactionCanceledException が発生
+  - トランザクションを完了するプロビジョンドキャパシティーが足りない場合
+  - 項目サイズが大きくなりすぎる (400 KB 超)、ローカルセカンダリインデックス (LSI) が大きくなりすぎる
+  - 無効なデータ形式などのユーザーエラーがある場合
+
+- 読み取りのエラー
+  - TransactGetItems リクエストが、TransactGetItems リクエスト内の 1 つ以上の項目に対する継続中の TransactWriteItems オペレーションと競合する場合、 TransactionCanceledException が発生
+  - トランザクションを完了するプロビジョンドキャパシティーが足りない場合
+  - 無効なデータ形式などのユーザーエラーがある場合
+
+- Exceptionのキャプチャー
+~~~java
+     private static List<Object> executeTransactionLoad(TransactionLoadRequest transactionLoadRequest) {
+        List<Object> loadedObjects = new ArrayList<Object>();
+        try {
+            loadedObjects = mapper.transactionLoad(transactionLoadRequest);
+        } catch (DynamoDBMappingException ddbme) {
+            System.err.println("Client side error in Mapper, fix before retrying. Error: " + ddbme.getMessage());
+        } catch (ResourceNotFoundException rnfe) {
+            System.err.println("One of the tables was not found, verify table exists before retrying. Error: " + rnfe.getMessage());
+        } catch (InternalServerErrorException ise) {
+            System.err.println("Internal Server Error, generally safe to retry with back-off. Error: " + ise.getMessage());
+        } catch (TransactionCanceledException tce) {
+            System.err.println("Transaction Canceled, implies a client issue, fix before retrying. Error: " + tce.getMessage());
+        } catch (Exception ex) {
+            System.err.println("An exception occurred, investigate and configure retry strategy. Error: " + ex.getMessage());
+        }
+        return loadedObjects;
+    }
+    private static void executeTransactionWrite(TransactionWriteRequest transactionWriteRequest) {
+        try {
+            mapper.transactionWrite(transactionWriteRequest);
+        } catch (DynamoDBMappingException ddbme) {
+            System.err.println("Client side error in Mapper, fix before retrying. Error: " + ddbme.getMessage());
+        } catch (ResourceNotFoundException rnfe) {
+            System.err.println("One of the tables was not found, verify table exists before retrying. Error: " + rnfe.getMessage());
+        } catch (InternalServerErrorException ise) {
+            System.err.println("Internal Server Error, generally safe to retry with back-off. Error: " + ise.getMessage());
+        } catch (TransactionCanceledException tce) {
+            System.err.println("Transaction Canceled, implies a client issue, fix before retrying. Error: " + tce.getMessage());
+        } catch (Exception ex) {
+            System.err.println("An exception occurred, investigate and configure retry strategy. Error: " + ex.getMessage());
+        }
+    }
+~~~
