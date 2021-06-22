@@ -31,6 +31,10 @@ public class PeopleService {
 		return dynamoDBRepository.findIdAndMoreSubId(id, subId);
 	}
 
+	public List<People> findAndEqName(String id, String name) {
+		return dynamoDBRepository.findIdAndEqName(id, name);
+	}
+
 	public List<People> transactionLoad() {
 		return dynamoDBRepository.transactionLoad();
 	}

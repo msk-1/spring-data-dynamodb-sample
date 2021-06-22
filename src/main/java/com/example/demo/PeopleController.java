@@ -49,4 +49,9 @@ public class PeopleController {
 	public List<People> transactionLoad() {
 		return peopleService.transactionLoad();
 	}
+
+	@GetMapping("/find_id_and_eq_name")
+	public List<People> findAndEqName(@RequestParam(value = "id") String id, @RequestParam(value = "name") String name) {
+		return peopleService.findAndEqName(id, name);
+	}
 }
